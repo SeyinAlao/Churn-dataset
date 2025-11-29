@@ -12,8 +12,6 @@ import {
   ChevronUp 
 } from "lucide-react";
 
-// --- CONFIGURATION ---
-// 🔴 LINKING YOUR LIVE RENDER BACKEND
 const API_URL = "https://my-churn-prediction-app.onrender.com"; 
 
 interface FormData {
@@ -35,7 +33,6 @@ interface FormData {
   PaperlessBilling: boolean;
   PaymentMethod: string;
   MonthlyCharges: number;
-  // TotalCharges is calculated dynamically
 }
 
 export default function Home() {
@@ -75,12 +72,10 @@ export default function Home() {
     setLoading(true);
 
     try {
-      // --- 1. DATA CURATION ---
       
       const toYesNo = (val: boolean) => (val ? "Yes" : "No");
       const calculatedTotalCharges = Number(formData.tenure) * Number(formData.MonthlyCharges);
 
-      // --- 2. PAYLOAD CONSTRUCTION ---
       const payload = {
         gender: formData.gender,
         SeniorCitizen: formData.SeniorCitizen ? 1 : 0, 
@@ -119,18 +114,15 @@ export default function Home() {
       }
 
       const data = await res.json();
-      console.log("Response Data:", data); // Debugging
-      
-      // --- 4. SAFE UPDATE UI ---
+      console.log("Response Data:", data); 
+
       const churnLabel = data.probability > 0.4 ? "Churn" : "No Churn";
-      
-      // CRASH FIX: Ensure shap_factors is always an array, never undefined
       const safeShapFactors = Array.isArray(data.shap_factors) ? data.shap_factors : [];
 
       setResult({
         prediction: churnLabel,
         probability: data.probability,
-        shap_factors: safeShapFactors // Using the safe version
+        shap_factors: safeShapFactors 
       });
 
     } catch (err: unknown) {
