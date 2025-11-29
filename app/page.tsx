@@ -6,13 +6,14 @@ import {
   CreditCard, 
   User, 
   AlertTriangle, 
-  CheckCircle,  
+  CheckCircle, 
   Wifi, 
   ChevronDown, 
   ChevronUp 
 } from "lucide-react";
 
 // --- CONFIGURATION ---
+// 🔴 LINKING YOUR LIVE RENDER BACKEND
 const API_URL = "https://my-churn-prediction-app.onrender.com"; 
 
 interface FormData {
@@ -74,13 +75,9 @@ export default function Home() {
     setLoading(true);
 
     try {
-      // --- 1. DATA CURATION (Strictly matching test_input) ---
+      // --- 1. DATA CURATION ---
       
-      // Helper to convert boolean to "Yes"/"No"
-      // We do NOT use "No internet service" here to avoid the previous 500 Error.
       const toYesNo = (val: boolean) => (val ? "Yes" : "No");
-
-      // Calculate TotalCharges dynamically
       const calculatedTotalCharges = Number(formData.tenure) * Number(formData.MonthlyCharges);
 
       // --- 2. PAYLOAD CONSTRUCTION ---
@@ -122,13 +119,18 @@ export default function Home() {
       }
 
       const data = await res.json();
+      console.log("Response Data:", data); // Debugging
       
-      // --- 4. UPDATE UI ---
+      // --- 4. SAFE UPDATE UI ---
       const churnLabel = data.probability > 0.4 ? "Churn" : "No Churn";
+      
+      // CRASH FIX: Ensure shap_factors is always an array, never undefined
+      const safeShapFactors = Array.isArray(data.shap_factors) ? data.shap_factors : [];
+
       setResult({
         prediction: churnLabel,
         probability: data.probability,
-        shap_factors: data.shap_factors
+        shap_factors: safeShapFactors // Using the safe version
       });
 
     } catch (err: unknown) {
@@ -239,7 +241,6 @@ export default function Home() {
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-800 mb-1.5">Payment Method</label>
-                      {/* UPDATED TO MATCH ENUMS EXACTLY */}
                       <select 
                         className="w-full p-2.5 bg-gray-50 border-none rounded-lg text-sm text-slate-700 font-medium"
                         value={formData.PaymentMethod}
@@ -322,24 +323,29 @@ export default function Home() {
                     <h3 className="font-semibold text-slate-800 mb-4">Top Contributing Factors</h3>
                     <p className="text-sm text-slate-400 mb-6">SHAP Explainability Analysis</p>
                     <div className="space-y-4">
-                      {result.shap_factors.map((factor, i) => {
-                        const barWidth = Math.min(Math.abs(factor.impact) * 500, 100); 
-                        return (
-                          <div key={i} className="group">
-                            <div className="flex items-center gap-4">
-                              <div className="w-40 text-right text-xs font-medium text-slate-500 truncate">
-                                {factor.feature}
-                              </div>
-                              <div className="flex-1">
-                                <div 
-                                  className="h-8 bg-blue-500 rounded-md transition-all group-hover:bg-blue-600"
-                                  style={{ width: `${barWidth}%`, minWidth: '4px' }}
-                                />
+                      {/* SAFELY MAP OVER FACTORS WITH OPTIONAL CHAINING */}
+                      {result.shap_factors?.length > 0 ? (
+                        result.shap_factors.map((factor, i) => {
+                          const barWidth = Math.min(Math.abs(factor.impact) * 500, 100); 
+                          return (
+                            <div key={i} className="group">
+                              <div className="flex items-center gap-4">
+                                <div className="w-40 text-right text-xs font-medium text-slate-500 truncate">
+                                  {factor.feature}
+                                </div>
+                                <div className="flex-1">
+                                  <div 
+                                    className="h-8 bg-blue-500 rounded-md transition-all group-hover:bg-blue-600"
+                                    style={{ width: `${barWidth}%`, minWidth: '4px' }}
+                                  />
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        )
-                      })}
+                          )
+                        })
+                      ) : (
+                        <p className="text-xs text-slate-400 italic">No specific risk factors identified.</p>
+                      )}
                     </div>
                   </div>
                 </div>
